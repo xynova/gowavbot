@@ -1,0 +1,71 @@
+# Multi-stage Dockerfile for gogwave
+# Stage 1: Build stage
+FROM ubuntu:22.04 AS builder
+
+# Set environment variables to avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    cmake \
+    build-essential \
+    pkg-config \
+    golang-go \
+    libasound2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Go environment variables
+ENV GOPATH=/go
+ENV PATH=$PATH:/go/bin
+ENV CGO_ENABLED=1
+
+# Create working directory
+WORKDIR /app
+
+# Copy the project files
+COPY . .
+
+# Build ggwave library
+RUN make build
+
+# Install ggwave library
+RUN make install
+
+# Download dependencies
+RUN go mod download
+RUN go mod tidy
+
+# Build Go examples
+RUN cd examples/encode-decode && go build -o encode-decode main.go
+
+# Run tests to verify build
+RUN go test .
+
+# Stage 2: Runtime stage
+FROM ubuntu:22.04 AS runtime
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    libasound2 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the built library from builder stage
+COPY --from=builder /usr/local/lib/libggwave.so /usr/local/lib/
+COPY --from=builder /usr/local/include/ggwave /usr/local/include/ggwave
+
+# Update library cache
+RUN ldconfig
+
+# Copy Go binaries and source
+COPY --from=builder /app/examples/encode-decode/encode-decode /app/examples/encode-decode/
+COPY --from=builder /app/*.go /app/
+COPY --from=builder /app/go.mod /app/go.sum /app/
+
+# Set working directory
+WORKDIR /app
+
+# Set the default command
+CMD ["bash"] 

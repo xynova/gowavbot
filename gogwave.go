@@ -163,7 +163,7 @@ func (gg *GGWave) SetDecodeBufferSize(size int) {
 //	waveform - the generated audio waveform.
 func (gg *GGWave) Encode(payload []byte, protocol GGWaveProtocolType, volume int) ([]byte, error) {
 
-	payloadPtr := unsafe.SliceData(payload)
+	payloadPtr := &payload[0]
 
 	waveSize := C.ggwave_encode(gg.i, unsafe.Pointer(payloadPtr), C.int(len(payload)), C.ggwave_ProtocolId(ProtocolAudibleNormal), C.int(25), nil, C.int(1))
 	if waveSize < C.int(0) {
@@ -172,7 +172,7 @@ func (gg *GGWave) Encode(payload []byte, protocol GGWaveProtocolType, volume int
 
 	out := make([]byte, int(waveSize))
 
-	outPtr := unsafe.SliceData(out)
+	outPtr := &out[0]
 
 	waveSize = C.ggwave_encode(gg.i, unsafe.Pointer(payloadPtr), C.int(len(payload)), C.ggwave_ProtocolId(ProtocolAudibleNormal), C.int(25), unsafe.Pointer(outPtr), C.int(0))
 	if waveSize < C.int(0) {
@@ -191,10 +191,10 @@ func (gg *GGWave) Encode(payload []byte, protocol GGWaveProtocolType, volume int
 //	payloadBuffer - stores the decoded data on success
 func (gg *GGWave) Decode(waveform []byte) ([]byte, error) {
 
-	waveformPtr := unsafe.SliceData(waveform)
+	waveformPtr := &waveform[0]
 
 	payload := make([]byte, gg.decodeBufferSize)
-	payloadPtr := unsafe.SliceData(payload)
+	payloadPtr := &payload[0]
 
 	bcount := C.ggwave_decode(gg.i, unsafe.Pointer(waveformPtr), C.int(len(waveform)), unsafe.Pointer(payloadPtr))
 	if int(bcount) <= 0 {

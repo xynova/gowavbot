@@ -1,6 +1,6 @@
 module github.com/diegohce/gogwave
 
-go 1.23.3
+go 1.18
 
 require (
 	github.com/go-audio/audio v1.0.0
